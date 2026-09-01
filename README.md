@@ -30,21 +30,8 @@ pip install -r requirements-trf.txt
 ```
 Then pick "Transformer (en_core_web_trf)" in the app's sidebar model dropdown.
 
-## Deploy for free — Streamlit Community Cloud
 
-1. Push this repo to GitHub (public or private).
-2. Go to [share.streamlit.io](https://share.streamlit.io), sign in with GitHub.
-3. Click **New app**, pick this repo/branch, set the main file to `app.py`.
-4. Deploy. Streamlit Cloud installs from `requirements.txt` automatically.
 
-Notes:
-- The free tier's memory (roughly ~1GB) is why `requirements.txt` defaults to `en_core_web_sm` rather than the transformer model — `en_core_web_trf` + torch generally won't fit or will run very slowly. Don't add `requirements-trf.txt` on this tier.
-- Free apps sleep after inactivity and wake on the next visit (a few seconds' delay) — this is normal.
-- No secrets/API keys are needed for this app, so there's nothing to configure in Streamlit Cloud's "Secrets" panel.
-
-## Deploy for free — Hugging Face Spaces (alternative)
-
-Hugging Face's free CPU tier policies for Streamlit-type Spaces have shifted over time — check your account's current options before relying on this route. If available: create a Space, choose the Streamlit SDK, push this repo's contents to it (HF Spaces work as their own git remote), and it builds from `requirements.txt` automatically the same way.
 
 ## Model choice
 
