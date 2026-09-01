@@ -1,0 +1,12 @@
+# Optional: install these ON TOP OF requirements.txt only if you're hosting
+# somewhere with enough RAM (2GB+) to run the transformer model, e.g. your
+# own machine, a paid hosting tier, or Colab.
+#
+#   pip install -r requirements.txt -r requirements-trf.txt
+#
+# Free tiers (Streamlit Community Cloud's ~1GB default) generally can't
+# run this — stick to requirements.txt alone (en_core_web_sm) for those.
+
+spacy-transformers>=1.3
+torch --index-url https://download.pytorch.org/whl/cpu
+https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.8.0/en_core_web_trf-3.8.0-py3-none-any.whl
