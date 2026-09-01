@@ -1,24 +1,10 @@
-streamlit>=1.38
+streamlit
+pandas
+feedparser
+newspaper4k
+googlenewsdecoder
+lxml_html_clean
+networkx
+pyvis
 spacy>=3.7
-spacy-transformers>=1.3
-feedparser>=6.0
-newspaper4k>=0.9
-googlenewsdecoder>=0.1.6
-pandas>=2.0
-lxml_html_clean>=0.1
-
-# spaCy transformer-based English model (default) — not on PyPI's index,
-# install separately:
-# pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.8.0/en_core_web_trf-3.8.0-py3-none-any.whl
-# or: python -m spacy download en_core_web_trf
-#
-# Needs a torch build — pick one matching your hardware, e.g.:
-#   pip install torch --index-url https://download.pytorch.org/whl/cpu   (CPU only)
-#   pip install torch                                                     (auto-detects CUDA)
-#
-# Optional smaller/faster fallback model (also selectable in the app's sidebar):
-# pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
-
-# Optional zero-shot NER engine (heavier, pulls in its own torch/transformers).
-# Uncomment if you want the GLiNER path in ner_engine.py:
-# gliner>=0.2
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
