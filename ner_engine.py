@@ -1,14 +1,17 @@
 """
 ner_engine.py
 --------------
-Core NER engine: spaCy TRANSFORMER-based statistical model
-(en_core_web_trf, RoBERTa-based) + a custom EntityRuler layer for
-domain-specific entities the base model doesn't know (e.g. ticker
+Core NER engine: spaCy statistical model + a custom EntityRuler layer
+for domain-specific entities the base model doesn't know (e.g. ticker
 symbols, org aliases, custom watchlist terms).
 
-The transformer model is slower and needs more RAM than en_core_web_sm,
-but is noticeably more accurate — worth it for extracting entities from
-full article bodies rather than short headlines.
+Default model swapped to en_core_web_sm (CNN-based, ~12MB, no torch
+dependency, fast + low-RAM) so the app fits inside free hosting tiers
+like Streamlit Community Cloud (~1GB RAM). en_core_web_trf (RoBERTa
+transformer, ~440MB, needs spacy-transformers + torch, meaningfully
+more accurate but slow/RAM-hungry on CPU) is kept as an optional
+selection in the app's model dropdown for local/Colab use where
+resources aren't constrained.
 
 A second, optional GLiNER path is included but not imported by default,
 since it pulls in its own torch/transformers weights and is meaningfully
@@ -23,9 +26,16 @@ from dataclasses import dataclass
 
 import spacy
 
-# Default model swapped from en_core_web_sm -> en_core_web_trf.
-# Install: pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_trf-3.8.0/en_core_web_trf-3.8.0-py3-none-any.whl
-DEFAULT_MODEL = "en_core_web_trf"
+# Models available to switch between at runtime (e.g. via the app's
+# sidebar dropdown). "sm" is the default: light enough for free hosting.
+# "trf" is opt-in for environments (local machine, Colab) where accuracy
+# matters more than footprint.
+AVAILABLE_MODELS = {
+    "en_core_web_sm": "Fast, lightweight (~12MB, CPU-friendly, no torch needed)",
+    "en_core_web_trf": "Transformer-based, most accurate, slower & memory-heavy (~440MB, needs torch)",
+}
+
+DEFAULT_MODEL = "en_core_web_sm"
 
 # Human-readable labels for spaCy's default entity types.
 LABEL_DESCRIPTIONS = {
@@ -68,15 +78,28 @@ def load_pipeline(model_name: str = DEFAULT_MODEL, custom_patterns: list[dict] |
     component and is set to not overwrite spans the model is confident
     about, so custom rules extend the model rather than fighting it.
 
-    Works with either the transformer model (en_core_web_trf, default)
-    or the smaller CPU-only model (en_core_web_sm) — pass model_name
+    Works with either the lightweight model (en_core_web_sm, default —
+    the one to use for free/hosted deployments) or the transformer
+    model (en_core_web_trf — heavier, opt in via the app's dropdown for
+    local/Colab use where RAM isn't constrained). Pass model_name
     explicitly to switch.
+
+    Raises a clear error if a requested model isn't installed, rather
+    than letting spaCy's OSError bubble up unexplained (useful if a
+    hosting environment skipped installing trf to save space).
     """
     cache_key = f"{model_name}:{len(custom_patterns or [])}"
     if cache_key in _NLP_CACHE:
         return _NLP_CACHE[cache_key]
 
-    nlp = spacy.load(model_name)
+    try:
+        nlp = spacy.load(model_name)
+    except OSError as exc:
+        raise OSError(
+            f"Model '{model_name}' isn't installed in this environment. "
+            f"Available models should be one of: {list(AVAILABLE_MODELS)}. "
+            f"Install it with: python -m spacy download {model_name}"
+        ) from exc
 
     # Full news articles can be long; make sure spaCy won't silently
     # truncate/reject them (default max_length is already ~1M chars,
@@ -99,8 +122,8 @@ def run_ner(text: str, nlp) -> tuple[list[Entity], "spacy.tokens.Doc | None"]:
     Run the pipeline once and return both the flat Entity list and the
     underlying spaCy Doc. Callers that need sentence-level structure
     (e.g. knowledge_graph.py's co-occurrence graph) should use this
-    instead of extract_entities(), so the transformer model only runs
-    once per article rather than once per consumer.
+    instead of extract_entities(), so the model only runs once per
+    article rather than once per consumer.
     """
     if not text or not text.strip():
         return [], None
