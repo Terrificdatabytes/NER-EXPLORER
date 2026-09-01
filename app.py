@@ -16,7 +16,7 @@ import knowledge_graph as kg
 from ner_engine import DEFAULT_MODEL, LABEL_DESCRIPTIONS, build_ruler_pattern, load_pipeline, render_doc_html, run_ner
 from news_fetcher import NewsItem, fetch_articles, fetch_feed_entries, google_news_search_url, enrich_with_full_text
 
-st.set_page_config(page_title="News NER Explorer", page_icon="🗞️", layout="wide")
+st.set_page_config(page_title="News NER Explorer", page_icon="", layout="wide")
 
 DEFAULT_FEEDS = {
     "Google News: search a topic": None,  # built dynamically
@@ -27,15 +27,15 @@ DEFAULT_FEEDS = {
 }
 
 MODEL_OPTIONS = {
-    "Transformer (en_core_web_trf) — more accurate, slower": "en_core_web_trf",
-    "Small (en_core_web_sm) — faster, less accurate": "en_core_web_sm",
+    "Small (en_core_web_sm) — fast, low-RAM, works on free hosting": "en_core_web_sm",
+    "Transformer (en_core_web_trf) — more accurate, slower, RAM-heavy": "en_core_web_trf",
 }
 
 # ------------------------------------------------------------------ #
 # Sidebar: source selection
 # ------------------------------------------------------------------ #
 st.sidebar.title("🗞️ News NER Explorer")
-st.sidebar.caption("100% open-source pipeline: feedparser + newspaper4k + spaCy (transformer)")
+st.sidebar.caption("100% open-source pipeline: feedparser + newspaper4k + spaCy")
 
 source_choice = st.sidebar.selectbox("News source", list(DEFAULT_FEEDS.keys()))
 
@@ -77,13 +77,13 @@ label_filter = st.sidebar.multiselect(
     default=["PERSON", "ORG", "GPE", "DATE", "MONEY", "EVENT"] + ([custom_label.upper()] if custom_label else []),
 )
 
-run = st.sidebar.button("🔍 Fetch & Analyze", type="primary", width='stretch')
+run = st.sidebar.button(" Fetch & Analyze", type="primary", width='stretch')
 
 # ------------------------------------------------------------------ #
 # Main
 # ------------------------------------------------------------------ #
 st.title("Named Entity Recognition for News Articles")
-st.caption("Free RSS ingestion → full-text extraction → transformer-based spaCy NER, no API keys required.")
+st.caption("Free RSS ingestion → full-text extraction → spaCy NER, no API keys required.")
 
 if "results" not in st.session_state:
     st.session_state.results = None
@@ -131,11 +131,11 @@ else:
     c2.metric("Full article text extracted", f"{n_full_text}/{n_fetched}")
     c3.metric("Entities extracted", n_entities)
 
-    tab1, tab2, tab3, tab4 = st.tabs(["📰 Articles", "📊 Entity summary", "🕸️ Knowledge graph", "⬇️ Export"])
+    tab1, tab2, tab3, tab4 = st.tabs([" Articles", " Entity summary", " Knowledge graph", "⬇ Export"])
 
     with tab1:
         for item, ents, text_for_ner, doc in articles:
-            badge = "✅ full article" if item.is_full_text else "⚠️ headline/summary only"
+            badge = " full article" if item.is_full_text else "⚠️ headline/summary only"
             with st.expander(f"**{item.title}**  —  {item.source or 'unknown source'}  ·  {badge}"):
                 st.caption(item.published or "no date")
                 if item.link:
