@@ -7,6 +7,7 @@ Run with:  streamlit run app.py
 """
 
 import json
+from datetime import date, timedelta
 
 import pandas as pd
 import streamlit as st
@@ -41,11 +42,38 @@ source_choice = st.sidebar.selectbox("News source", list(DEFAULT_FEEDS.keys()))
 
 if source_choice == "Google News: search a topic":
     query = st.sidebar.text_input("Search query", value="artificial intelligence regulation")
-    feed_url = google_news_search_url(query) if query else None
-elif source_choice == "Custom RSS URL":
-    feed_url = st.sidebar.text_input("RSS feed URL", value="")
 else:
-    feed_url = DEFAULT_FEEDS[source_choice]
+    query = None
+    if source_choice == "Custom RSS URL":
+        feed_url = st.sidebar.text_input("RSS feed URL", value="")
+    else:
+        feed_url = DEFAULT_FEEDS[source_choice]
+
+st.sidebar.divider()
+st.sidebar.subheader("Date range (optional)")
+use_date_filter = st.sidebar.checkbox(
+    "Fetch articles from a specific date range", value=False,
+    help="Google News: pushed into the search itself (after:/before:). Other feeds: articles "
+         "are fetched normally and then filtered client-side by their published date.",
+)
+start_date = end_date = None
+if use_date_filter:
+    default_start = date.today() - timedelta(days=7)
+    date_range = st.sidebar.date_input(
+        "Articles published between",
+        value=(default_start, date.today()),
+        max_value=date.today(),
+    )
+    if isinstance(date_range, tuple) and len(date_range) == 2:
+        start_date, end_date = date_range
+    elif isinstance(date_range, date):
+        start_date = end_date = date_range
+    if start_date and end_date and start_date > end_date:
+        st.sidebar.error("Start date must be before end date.")
+        start_date, end_date = end_date, start_date
+
+if source_choice == "Google News: search a topic":
+    feed_url = google_news_search_url(query, start_date, end_date) if query else None
 
 num_articles = st.sidebar.slider("Number of articles", 1, 30, 8)
 fetch_full_text = st.sidebar.checkbox(
@@ -92,9 +120,21 @@ if run:
     if not feed_url:
         st.error("Please provide a feed URL or search query in the sidebar.")
     else:
-        with st.spinner(f"Fetching up to {num_articles} articles and loading {model_name}..."):
+        spinner_msg = f"Fetching up to {num_articles} articles and loading {model_name}..."
+        if use_date_filter and start_date and end_date:
+            spinner_msg = (
+                f"Fetching up to {num_articles} articles from {start_date.isoformat()} to "
+                f"{end_date.isoformat()} and loading {model_name}..."
+            )
+        with st.spinner(spinner_msg):
             nlp = load_pipeline(model_name=model_name, custom_patterns=custom_patterns or None)
-            items = fetch_articles(feed_url, limit=num_articles, full_text=fetch_full_text)
+            items = fetch_articles(
+                feed_url,
+                limit=num_articles,
+                full_text=fetch_full_text,
+                start_date=start_date,
+                end_date=end_date,
+            )
 
             all_rows = []
             article_results = []
@@ -113,6 +153,13 @@ if run:
                 "table": pd.DataFrame(all_rows),
                 "nlp": nlp,
             }
+
+            if not items and use_date_filter:
+                st.warning(
+                    "No articles matched that date range for this source/query. Try widening the "
+                    "range — some feeds don't publish a parseable date for every entry, and "
+                    "Google News' after:/before: filters are best-effort on Google's side."
+                )
 
 results = st.session_state.results
 

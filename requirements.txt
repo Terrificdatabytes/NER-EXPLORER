@@ -2,8 +2,9 @@ streamlit
 pandas
 feedparser
 newspaper4k
-googlenewsdecoder
+googlenewsdecoder>=0.1.7
 lxml_html_clean
+requests
 networkx
 pyvis
 spacy>=3.7
