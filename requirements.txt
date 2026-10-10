@@ -2,7 +2,11 @@ streamlit
 pandas
 feedparser
 newspaper4k
-googlenewsdecoder>=0.1.7
+googlenewsdecoder>=0.2.0,<0.3
+# googlenewsdecoder's own parser still imports selectolax's old "Modest"
+# backend, which selectolax>=1.0 removed outright (raises ImportError at
+# import time, not just a warning) - pin below 1.0 until upstream fixes it.
+selectolax<1.0
 lxml_html_clean
 requests
 networkx

@@ -78,22 +78,43 @@ def _decode_via_googlenewsdecoder(
     when several articles are decoded back-to-back. A few retries with
     exponential backoff + jitter absorb transient 429s/connection resets
     without needing any extra dependency.
+
+    googlenewsdecoder >=0.2 renamed its entry point from `new_decoderv1`
+    (returning {"status", "decoded_url"}) to `gnewsdecoder` (returning
+    {"success", "decoded_url"}). Both are tried so this keeps working
+    whichever major version ends up installed, instead of silently
+    reporting "not installed" for what's actually an API mismatch.
     """
     try:
-        from googlenewsdecoder import new_decoderv1
+        from googlenewsdecoder import gnewsdecoder as _decode_fn
+
+        def _call(u):
+            r = _decode_fn(u, interval=1)
+            return bool(r.get("success")), r.get("decoded_url"), r.get("message", r)
     except ImportError:
-        return None, "googlenewsdecoder not installed (pip install googlenewsdecoder)"
+        try:
+            from googlenewsdecoder import new_decoderv1 as _decode_fn
+
+            def _call(u):
+                r = _decode_fn(u, interval=1)
+                return bool(r.get("status")), r.get("decoded_url"), r.get("message", r)
+        except ImportError as exc:
+            # Report the REAL import failure (e.g. an incompatible
+            # dependency like selectolax>=1.0 removing the backend
+            # googlenewsdecoder's parser still imports) instead of a
+            # blanket "not installed" that hides what's actually wrong.
+            return None, f"googlenewsdecoder import failed: {exc}"
 
     last_error = None
     for attempt in range(retries):
         try:
-            result = new_decoderv1(link, interval=1)
+            ok, decoded_url, message = _call(link)
         except Exception as exc:
             last_error = f"googlenewsdecoder raised: {exc}"
         else:
-            if result.get("status") and result.get("decoded_url"):
-                return result["decoded_url"], None
-            last_error = f"googlenewsdecoder returned no URL: {result.get('message', result)}"
+            if ok and decoded_url:
+                return decoded_url, None
+            last_error = f"googlenewsdecoder returned no URL: {message}"
             # A clean "no URL" response (bad/expired link) won't improve on
             # retry; only back off+retry for exception-y / rate-limit cases.
             if "429" not in str(last_error) and "rate" not in str(last_error).lower():
